@@ -1,0 +1,12 @@
+[Trigger]
+Operation = Install
+Operation = Remove
+Operation = Upgrade
+Type = Package
+Target = *
+
+[Action]
+Description = Checking for uncommitted /etc changes (etckeeper)...
+When = PreTransaction
+Exec = /usr/local/bin/etckeeper-pre-pacman
+AbortOnFail

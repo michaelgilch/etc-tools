@@ -1,0 +1,40 @@
+#!/bin/bash
+#
+# Warn if /etc has uncommitted etckeeper changes before pacman transactions.
+# Runs as root via the pacman hook system.
+# Install to /usr/local/bin/etckeeper-pre-pacman
+
+# Nothing to do if etckeeper is not installed.
+if ! command -v etckeeper &>/dev/null; then
+  exit 0
+fi
+
+# Nothing to do if /etc is not yet a git repo.
+if ! git -C /etc rev-parse --git-dir &>/dev/null; then
+  exit 0
+fi
+
+if etckeeper unclean; then
+  echo "*************************************************************" >&2
+  echo "==> WARNING: /etc has uncommitted changes tracked by etckeeper." >&2
+  echo "*************************************************************" >&2
+  echo >&2
+  git -C /etc status --short >&2
+  echo >&2
+
+  local_choice=""
+  while true; do
+    read -rp "==> (a)bort, (c)ontinue? " local_choice < /dev/tty
+    case "${local_choice}" in
+      a|A)
+        exit 1
+        ;;
+      c|C)
+        break
+        ;;
+      *)
+        echo "Invalid choice." >&2
+        ;;
+    esac
+  done
+fi

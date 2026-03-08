@@ -1,0 +1,60 @@
+#!/bin/bash
+#
+# List files manually modified in /etc by showing files from non-automatic
+# etckeeper commits.
+#
+# Etckeeper automatic commit messages:
+#   - "saving uncommitted changes in /etc prior to <pkg_manager> run"
+#   - "committing changes in /etc after <pkg_manager> run"
+#   - "committing changes in /etc made by \"<command>\""
+#   - "daily autocommit"
+#
+# Any commit not matching these patterns is considered a manual commit.
+#
+# Install to /usr/local/bin/etc-show-custom
+
+set -euo pipefail
+
+AUTO_PATTERNS=(
+  "^saving uncommitted changes in /etc prior to .* run$"
+  "^committing changes in /etc after .* run$"
+  "^committing changes in /etc made by "
+  "^daily autocommit$"
+  "^Initial commit$"
+)
+
+is_auto_commit() {
+  local msg="$1"
+  for pattern in "${AUTO_PATTERNS[@]}"; do
+    if [[ "$msg" =~ $pattern ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+manual_commits=()
+while IFS= read -r line; do
+  hash="${line%% *}"
+  msg="${line#* }"
+  if ! is_auto_commit "$msg"; then
+    manual_commits+=("$hash")
+  fi
+done < <(sudo git -C /etc log --format="%H %s")
+
+if [[ ${#manual_commits[@]} -eq 0 ]]; then
+  echo "No manual commits found."
+  exit 0
+fi
+
+# Collect unique files across all manual commits.
+files=$(printf '%s\n' "${manual_commits[@]}" \
+  | xargs -I{} sudo git -C /etc diff-tree --name-only -r {} \
+  | sort -u)
+
+if [[ -z "$files" ]]; then
+  echo "No files changed in manual commits."
+  exit 0
+fi
+
+echo "$files"

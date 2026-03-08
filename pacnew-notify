@@ -1,0 +1,39 @@
+#!/bin/bash
+#
+# Detect .pacnew and .pacsave files after a pacman transaction and prompt to 
+# continue or abort before etckeeper's auto-commit runs.
+#
+# With AbortOnFail in the hook, aborting prevents subsequent PostTransaction
+# hooks (e.g. zz-etckeeper.hook) from running, giving you time to merge
+# pacnew files and commit manually with a meaningful message.
+#
+# Install to /usr/local/bin/pacnew-notify
+
+mapfile -t pac_files < <(
+  find /etc /usr /boot \( -name "*.pacnew" -o -name "*.pacsave" \) \
+    -print 2>/dev/null | sort || true
+)
+
+if [[ ${#pac_files[@]} -eq 0 ]]; then
+  exit 0
+fi
+
+echo "************************************************************" >&2
+echo "==> The following pacnew/pacsave files require attention:" >&2
+echo "************************************************************" >&2
+printf '  %s\n' "${pac_files[@]}" >&2
+echo >&2
+echo "  Merge with: pacdiff" >&2
+echo >&2
+
+while true; do
+  read -rp "==> (c)ontinue (etckeeper auto-commits), (a)bort (handle manually)? " choice < /dev/tty
+  case "$choice" in
+    c|C) break ;;
+    a|A)
+      echo "Aborted. After resolving, run: sudo etckeeper commit 'merge pacnew files'" >&2
+      exit 1
+      ;;
+    *) echo "Invalid choice." >&2 ;;
+  esac
+done
