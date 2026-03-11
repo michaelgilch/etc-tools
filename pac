@@ -8,7 +8,6 @@
 # etckeepers pre and post install commits.
 #
 # Usage:
-#   pac                  — full upgrade (runs yay)
 #   pac yay -S firefox   — run yay with args
 #   pac pacman -Syu      — run pacman with args
 #
