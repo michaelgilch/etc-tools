@@ -17,6 +17,27 @@
 
 set -euo pipefail
 
+# Returns 0 (true) if the operation is read-only and the /etc dirty check
+# should be skipped. Args are the pacman/yay arguments (not the command itself).
+#
+# Read-only operations:
+#   pacman/yay: -Q* (query), -F* (file query)
+#   yay-only:   -P* (show/print), -G* (getpkgbuild)
+#   any:        -h/--help, -V/--version
+#
+# -S is intentionally NOT treated as read-only even though -Ss (search) is,
+# because the common case (-S <pkg>, -Syu) is a write operation.
+is_readonly_op() {
+  for arg in "$@"; do
+    [[ "$arg" != -* ]] && continue
+    case "$arg" in
+      -Q*|-F*|-P*|-G*|-h|-V|--help|--version) return 0 ;;
+    esac
+    return 1  # first flag found, not in read-only set
+  done
+  return 1  # no flags (e.g. bare `yay`) = full upgrade = write
+}
+
 main() {
   # Default to yay (full upgrade) if no args given.
   if [[ $# -eq 0 ]]; then
@@ -24,7 +45,7 @@ main() {
   fi
 
   # Skip check if etckeeper is not installed or /etc is not a git repo.
-  if command -v etckeeper &>/dev/null \
+  if ! is_readonly_op "${@:2}" && command -v etckeeper &>/dev/null \
       && sudo git -C /etc rev-parse --git-dir &>/dev/null; then
     if sudo etckeeper unclean; then
       echo "==> /etc has uncommitted changes:" >&2
