@@ -50,7 +50,8 @@ fi
 # Collect unique files across all manual commits.
 files=$(printf '%s\n' "${manual_commits[@]}" \
   | xargs -I{} sudo git -C /etc diff-tree --no-commit-id --name-only -r {} \
-  | sort -u)
+  | sort -u \
+  | grep -v '^\.etckeeper$')
 
 if [[ -z "$files" ]]; then
   echo "No files changed in manual commits."

@@ -31,6 +31,16 @@ Lists files that were manually modified in `/etc` by scanning the etckeeper git 
 sudo etc-show-custom
 ```
 
+### `etc-backup-custom`
+
+Backs up all manually-modified `/etc` files (as identified by `etc-show-custom`) to a destination directory, preserving the path structure. Useful for snapshotting your custom config before a major change or migration.
+
+```
+sudo etc-backup-custom /path/to/backup/dir
+```
+
+Each file from `/etc/foo/bar` is copied to `<dest>/etc/foo/bar`. The destination directory is created if it doesn't exist.
+
 ### `etckeeper-pre-pacman`
 
 Script run by the `etckeeper-check.hook` pacman hook before every transaction. Warns if `/etc` has uncommitted changes and prompts to abort or continue. Unlike `pac`, this runs as root directly via pacman's hook system (no sudo needed).
@@ -56,14 +66,20 @@ Run as root from the repo directory:
 sudo ./install.sh
 ```
 
-This installs:
+This does two things:
 
+**System files** (copied, requires root):
 - `/usr/local/bin/etckeeper-pre-pacman`
-- `/usr/local/bin/pac`
-- `/usr/local/bin/etc-show-custom`
 - `/usr/local/bin/pacnew-notify`
 - `/etc/pacman.d/hooks/etckeeper-check.hook`
 - `/etc/pacman.d/hooks/pacnew-notify.hook`
+
+**User scripts** (symlinked from the repo into `~/.local/bin/`):
+- `~/.local/bin/pac` → `<repo>/bin/pac`
+- `~/.local/bin/etc-show-custom` → `<repo>/bin/etc-show-custom`
+- `~/.local/bin/etc-backup-custom` → `<repo>/bin/etc-backup-custom`
+
+Symlinks mean edits to the repo files take effect immediately without reinstalling. The symlinks are created as the invoking user (via `$SUDO_USER`), not root.
 
 ## Requirements
 

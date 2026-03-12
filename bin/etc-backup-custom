@@ -1,0 +1,53 @@
+#!/bin/bash
+#
+# Back up manually-modified /etc files (as identified by etc-show-custom)
+# to a destination directory, preserving the path structure.
+#
+# Usage: sudo etc-backup-custom <dest-dir>
+#
+# Each file from /etc/foo/bar is copied to <dest-dir>/etc/foo/bar.
+
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  echo "Usage: $(basename "$0") <dest-dir>" >&2
+  exit 1
+fi
+
+DEST="$1"
+
+mkdir -p "$DEST"
+
+files=$(etc-show-custom)
+
+if [[ -z "$files" ]]; then
+  echo "No custom files to back up."
+  exit 0
+fi
+
+copied=0
+missing=0
+
+while IFS= read -r rel; do
+  src="/etc/$rel"
+  if [[ ! -f "$src" ]]; then
+    echo "skip (not a regular file): $src"
+    (( missing++ )) || true
+    continue
+  fi
+  if [[ ! -r "$src" ]]; then
+    echo "skip (not readable): $src"
+    (( missing++ )) || true
+    continue
+  fi
+  dest_file="$DEST/etc/$rel"
+  install -Dm644 "$src" "$dest_file"
+  echo "$dest_file"
+  (( copied++ )) || true
+done <<< "$files"
+
+echo ""
+echo "Backed up $copied file(s) to $DEST/etc/"
+if (( missing > 0 )); then
+  echo "Skipped $missing file(s) (not found or not regular files)."
+fi
