@@ -24,7 +24,8 @@ if etckeeper unclean; then
 
   local_choice=""
   while true; do
-    read -rp "==> (a)bort, (c)ontinue? " local_choice < /dev/tty
+    printf "==> (a)bort, (c)ontinue? " >/dev/tty
+    read -r local_choice </dev/tty
     case "${local_choice}" in
       a|A)
         exit 1
